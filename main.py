@@ -2,7 +2,7 @@ import os
 from telegram import Update, InputFile
 from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, filters, ContextTypes
 
-BOT_TOKEN = os.getenv("7875762200:AAHCCgarZqdDVrnv3HF6LlpD52t16t2wUvI")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Send me a PDF or EPUB file, and I’ll convert it for you.")
@@ -27,7 +27,7 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
     os.remove(output_path)
 
 if __name__ == "__main__":
-    app = ApplicationBuilder().token(7875762200:AAHCCgarZqdDVrnv3HF6LlpD52t16t2wUvI).build()
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.Document.ALL, handle_file))
     app.run_polling()
