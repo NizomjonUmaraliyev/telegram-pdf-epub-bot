@@ -1,33 +1,40 @@
 import os
 from telegram import Update, InputFile
-from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, filters, ContextTypes
+from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
+from converter import convert_file
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Send me a PDF or EPUB file, and I’ll convert it for you.")
-
 async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    file = await update.message.document.get_file()
-    file_path = f"{update.message.document.file_name}"
-    await file.download_to_drive(file_path)
+    document = update.message.document
+    file = await context.bot.get_file(document.file_id)
 
-    # Dummy conversion (just renaming for now)
-    if file_path.endswith(".pdf"):
-        output_path = file_path.replace(".pdf", ".epub")
-        os.rename(file_path, output_path)
-    elif file_path.endswith(".epub"):
-        output_path = file_path.replace(".epub", ".pdf")
-        os.rename(file_path, output_path)
+    input_path = f"input_{document.file_name}"
+    await file.download_to_drive(input_path)
+
+    if document.file_name.endswith(".pdf"):
+        output_format = "epub"
+    elif document.file_name.endswith(".epub"):
+        output_format = "pdf"
     else:
         await update.message.reply_text("Only PDF or EPUB files are supported.")
         return
 
-    await update.message.reply_document(document=InputFile(output_path))
-    os.remove(output_path)
+    await update.message.reply_text("Converting your file, please wait...")
 
-if __name__ == "__main__":
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.Document.ALL, handle_file))
+    try:
+        converted_path = convert_file(input_path, output_format)
+        await update.message.reply_document(document=InputFile(converted_path))
+    except Exception as e:
+        await update.message.reply_text(f"Conversion failed: {e}")
+    finally:
+        os.remove(input_path)
+        if os.path.exists(converted_path):
+            os.remove(converted_path)
+
+app = ApplicationBuilder().token(BOT_TOKEN).build()
+app.add_handler(MessageHandler(filters.Document.ALL, handle_file))
+
+if __name__ == '__main__':
+    print("Bot is running...")
     app.run_polling()
